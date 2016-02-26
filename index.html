@@ -30,7 +30,7 @@
 		<input type="text" data-slider="true" value="0" data-slider-range="0,390"
 						   data-slider-step="1" data-slider-highlight="true">
 		<div id="chart"></div>
-		<h2>Versija 0.4</h2>
+		<h2>Versija 0.4.2</h2>
 	</div>
 
 
@@ -46,6 +46,8 @@ var FINISH_MIN;
 var OVER_HOUR;
 var OVER_MIN;
 var PENALTY_POINTS;
+var TEAM_COUNT;
+var TEAM_COUNT_CATEGORY;
 
 var globalData = "";
 var hours;
@@ -57,7 +59,7 @@ var setup = function(targetID){
 	//Set size of svg element and chart
 	var margin = {top: 0, right: 0, bottom: 0, left: 0},
 		width = 600 - margin.left - margin.right,
-		height = 400 - margin.top - margin.bottom,
+		height = 450 - margin.top - margin.bottom,
 		categoryIndent = 4*15 + 5,
 		defaultBarWidth = 2000;
 
@@ -82,30 +84,6 @@ var setup = function(targetID){
 	  svg:svg, x:x, y:y
 	}
 	return settings;
-}
-
-var checkbox_click = function(targetid, callback, data) {
-    var rowCount = 0
-
-    while (redrawing){ console.log("Waiting")}
-    processing_chk = true
-    var newdata = data
-    newdata.forEach(function(d,i){
-            rowCount++
-            var rclass = d.rclass
-            var remove_team = false
-            switch (d.rclass.substring(0,1)){
-                    case "M": remove_team = !document.getElementById("chkM").checked; break;
-                    case "W": remove_team = !document.getElementById("chkW").checked; break;
-                    case "X": remove_team = !document.getElementById("chkX").checked; break;
-                    case "F": remove_team = !document.getElementById("chkF").checked; break;
-                }
-            if (remove_team) newdata.splice(i,1)
-            })
-    console.log("Rows:",rowCount)
-
-    //callback(targetid, newdata)
-    processing_chk = false
 }
 
 var redrawChart = function(targetID, newdata_param) {
@@ -165,6 +143,16 @@ var redrawChart = function(targetID, newdata_param) {
 	  .attr("opacity",0)
 	  .attr("dy",".35em")
 	  .attr("dx","0.5em")
+      .attr("font-size", function(d)
+            {switch (TEAM_COUNT_CATEGORY)
+	  				{
+	  				case 1:return "22px"
+	  				case 2:return "20px"
+	  				case 3:return "16px"
+	  				case 4:return "14px"
+                    case 5:return "12px"
+                    case 6:return "10px"
+	  				}})
 	  .text(function(d){return d.value;});
 
 	//Add Headlines
@@ -176,6 +164,16 @@ var redrawChart = function(targetID, newdata_param) {
 	  .attr("opacity",0)
 	  .attr("dy",".35em")
 	  .attr("dx","0.5em")
+      .attr("font-size", function(d)
+            {switch (TEAM_COUNT_CATEGORY)
+	  				{
+	  				case 1:return "16px"
+	  				case 2:return "14px"
+	  				case 3:return "13px"
+	  				case 4:return "12px"
+                    case 5:return "11px"
+                    case 6:return "10px"
+	  				}})
 	  .text(function(d){return d.team});
 
 
@@ -233,7 +231,20 @@ var redrawChart = function(targetID, newdata_param) {
 
 };
 
+//Returns true if time in string value time_str is strictly less than time represented by hours and minutes.
+var strictlyLessTime = function(time_str, hours, minutes){
 
+	var time_h = parseInt(time_str.substring(0,2));
+	var time_min = parseInt(time_str.substring(3,5));
+
+	if (time_h > hours) return false;
+		else {
+			if (time_h < hours) return true;
+				else {
+					if (time_min >= minutes) return false; else return true;
+				}
+		}
+}
 
 //Returns true if time in string value time_str is less or equal to time represented by hours and minutes.
 var lessTime = function(time_str, hours, minutes){
@@ -287,7 +298,7 @@ var updateData = function(settings,callback,slider_value){
 				      globalData[i].value = newValue
                    }else{
                       //Subtract points for late finishers
-                      if (EVENT_FINISHED && !lessTime(c.time,FINISH_HOUR,FINISH_MIN))
+                      if (EVENT_FINISHED && !strictlyLessTime(c.time,FINISH_HOUR,FINISH_MIN))
                           globalData[i].value -= PENALTY_POINTS * (parseInt(c.time.substring(3,5)) - FINISH_MIN + 1)
                       globalData[i].finished = true
                    }
@@ -322,6 +333,16 @@ var loadData = function(settings,callback){
         document.getElementById("event_title").innerHTML = EVENT_TITLE
 
         globalData = formatData(data.teamresults);
+
+        //Count teams
+        TEAM_COUNT = 0
+        globalData.forEach(function(d,i){
+                TEAM_COUNT++
+        })
+
+        TEAM_COUNT_CATEGORY = Math.floor(TEAM_COUNT / 10) + 1
+        if (TEAM_COUNT_CATEGORY > 6) TEAM_COUNT_CATEGORY = 6
+        console.log(TEAM_COUNT_CATEGORY)
 
 		callback(settings,globalData);
 	})

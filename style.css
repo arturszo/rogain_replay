@@ -42,7 +42,7 @@ h2 {
 }
 #chart{
 	width:600px;
-	height:400px;
+	height:450px;
 }
 /*.bar{
 	fill:#eaeaea;
@@ -50,10 +50,10 @@ h2 {
 text.label{
 	fill: #777777;
 	color: #777777;
-	font-size: 20px;
+	/*font-size: 20px; */
 	font-weight: bold;
 }
 text.category{
 	fill: #666666;
-	font-size: 14px;
+	/* font-size: 14px; */
 }
