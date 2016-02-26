@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="charset=UTF-8">
+	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script src="js/simple-slider.js"></script>
+
+    <link href="css/simple-slider.css" rel="stylesheet" type="text/css" />
+    <link href="css/simple-slider-volume.css" rel="stylesheet" type="text/css" />
+	<link rel="stylesheet" href="style.css">
+
+	<style>
+	  [class^=slider] { display: inline-block; margin-bottom: 30px; }
+  .output { color: #888; font-size: 14px; padding-top: 1px; margin-left: 5px; vertical-align: top;}
+  	</style>
+
+</head>
+
+<body>
+
+	<div id="everything">
+		<h1 id="event_title"></h1>
+		<h2>Rezultātu vizualizācija</h2>
+        <form action="">
+            <input id = "pause" type="checkbox" name="rogain_class" value="Go" checked>Pause/Resume
+        </form>
+		<div id="timer"></div>
+		<input type="text" data-slider="true" value="0" data-slider-range="0,390"
+						   data-slider-step="1" data-slider-highlight="true">
+		<div id="chart"></div>
+		<h2>Versija 0.4</h2>
+	</div>
+
+
+	<script>
+
+//updatingBarChart.js
+
+var EVENT_TITLE;
+var START_HOUR;
+var START_MIN;
+var FINISH_HOUR;
+var FINISH_MIN;
+var OVER_HOUR;
+var OVER_MIN;
+var PENALTY_POINTS;
+
+var globalData = "";
+var hours;
+var minutes;
+var EVENT_FINISHED = false;
+var EVENT_OVERTIMED = false;
+
+var setup = function(targetID){
+	//Set size of svg element and chart
+	var margin = {top: 0, right: 0, bottom: 0, left: 0},
+		width = 600 - margin.left - margin.right,
+		height = 400 - margin.top - margin.bottom,
+		categoryIndent = 4*15 + 5,
+		defaultBarWidth = 2000;
+
+	//Set up scales
+	var x = d3.scale.linear()
+	  .domain([0,defaultBarWidth])
+	  .range([0,width]);
+	var y = d3.scale.ordinal()
+	  .rangeRoundBands([0, height], 0.1, 0);
+
+	//Create SVG element
+	d3.select(targetID).selectAll("svg").remove()
+	var svg = d3.select(targetID).append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	    .append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	//Package and export settings
+	var settings = {
+	  margin:margin, width:width, height:height, categoryIndent:categoryIndent,
+	  svg:svg, x:x, y:y
+	}
+	return settings;
+}
+
+var checkbox_click = function(targetid, callback, data) {
+    var rowCount = 0
+
+    while (redrawing){ console.log("Waiting")}
+    processing_chk = true
+    var newdata = data
+    newdata.forEach(function(d,i){
+            rowCount++
+            var rclass = d.rclass
+            var remove_team = false
+            switch (d.rclass.substring(0,1)){
+                    case "M": remove_team = !document.getElementById("chkM").checked; break;
+                    case "W": remove_team = !document.getElementById("chkW").checked; break;
+                    case "X": remove_team = !document.getElementById("chkX").checked; break;
+                    case "F": remove_team = !document.getElementById("chkF").checked; break;
+                }
+            if (remove_team) newdata.splice(i,1)
+            })
+    console.log("Rows:",rowCount)
+
+    //callback(targetid, newdata)
+    processing_chk = false
+}
+
+var redrawChart = function(targetID, newdata_param) {
+
+    var newdata = newdata_param
+
+	//Import settings
+	var margin=settings.margin, width=settings.width, height=settings.height, categoryIndent=settings.categoryIndent,
+	svg=settings.svg, x=settings.x, y=settings.y;
+
+	//Reset domains
+	y.domain(newdata.sort(function(a,b){
+	  return b.value - a.value;
+	})
+	  .map(function(d) { return d.team; }));
+	var barmax = d3.max(newdata, function(e) {
+	  return e.value;
+	});
+	x.domain([0,barmax]);
+
+	/////////
+	//ENTER//
+	/////////
+
+	//Bind new data to chart rows
+
+	//Create chart row and move to below the bottom of the chart
+	var chartRow = svg.selectAll("g.chartRow")
+	  .data(newdata, function(d){ return d.team});
+	var newRow = chartRow
+	  .enter()
+	  .append("g")
+	  .attr("class", "chartRow")
+	  .attr("transform", "translate(0," + height + margin.top + margin.bottom + ")");
+
+	//Add rectangles
+	newRow.insert("rect")
+	  .attr("class","bar")
+	  .attr("x", 0)
+	  .attr("opacity", 0)
+	  .attr("height", y.rangeBand())
+	  .attr("fill", function(d)
+	  			{switch (d.rclass.substring(0,1))
+	  				{
+	  				case "M":col="#6DBDD6"; break;
+	  				case "X":col="#FFE658"; break;
+	  				case "W":col="#FF7878"; break;
+	  				case "F":col="#A8CD1B"; break;}
+	  				return col})
+	  .attr("width", function(d) { return x(d.value);})
+
+	//Add value labels
+	newRow.append("text")
+	  .attr("class","label")
+	  .attr("y", y.rangeBand()/2)
+	  .attr("x",0)
+	  .attr("opacity",0)
+	  .attr("dy",".35em")
+	  .attr("dx","0.5em")
+	  .text(function(d){return d.value;});
+
+	//Add Headlines
+	newRow.append("text")
+	  .attr("class","category")
+	  .attr("text-overflow","ellipsis")
+	  .attr("y", y.rangeBand()/2)
+	  .attr("x",categoryIndent)
+	  .attr("opacity",0)
+	  .attr("dy",".35em")
+	  .attr("dx","0.5em")
+	  .text(function(d){return d.team});
+
+
+	//////////
+	//UPDATE//
+	//////////
+
+	//Update bar widths
+	chartRow.select(".bar").transition()
+	  .duration(300)
+	  .attr("width", function(d) { return x(d.value);})
+	  .attr("opacity",function(d){return d.finished ? 0.2 : 1});
+
+	//Update data labels
+	chartRow.select(".label").transition()
+	  .duration(300)
+	  .attr("opacity",1)
+	  .tween("text", function(d) {
+		var i = d3.interpolate(+this.textContent.replace(/\,/g,''), +d.value);
+		return function(t) {
+		  this.textContent = Math.round(i(t));
+		};
+	  });
+
+	//Fade in categories
+	chartRow.select(".category").transition()
+	  .duration(300)
+	  .attr("opacity",1)
+	  .text(function(d){return d.team});
+
+
+	////////
+	//EXIT//
+	////////
+
+	//Fade out and remove exit elements
+	chartRow.exit().transition()
+	  .style("opacity","0")
+	  .attr("transform", "translate(0," + (height + margin.top + margin.bottom) + ")")
+	  .remove();
+
+
+	////////////////
+	//REORDER ROWS//
+	////////////////
+
+	var delay = function(d, i) { return 200 + i * 30; };
+
+	chartRow.transition()
+		.delay(delay)
+		.duration(900)
+		.attr("transform", function(d){ return "translate(0," + y(d.team) + ")"; });
+
+    redrawing = false
+
+};
+
+
+
+//Returns true if time in string value time_str is less or equal to time represented by hours and minutes.
+var lessTime = function(time_str, hours, minutes){
+
+
+	var time_h = parseInt(time_str.substring(0,2));
+	var time_min = parseInt(time_str.substring(3,5));
+
+	if (time_h > hours) return false;
+		else {
+			if (time_h < hours) return true;
+				else {
+					if (time_min > minutes) return false; else return true;
+				}
+		}
+}
+
+//Updates data
+//Since our data is fake, adds some random changes to simulate a data stream.
+//Uses a callback because d3.json loading is asynchronous
+var updateData = function(settings,callback,slider_value){
+
+		//Update slider
+		if (slider_value == -1) {
+			if (minutes < 59) minutes += 1; else {minutes = 0; hours +=1}
+			$("[data-slider]").simpleSlider("setValue",(hours-START_HOUR)*60 + minutes);
+
+			} else {
+				hours = START_HOUR + Math.floor(slider_value / 60);
+				minutes = START_MIN + slider_value % 60;
+			}
+
+        //Check whether time is over
+        if ( (hours > FINISH_HOUR) || ((hours == FINISH_HOUR) && (minutes >= FINISH_MIN))) EVENT_FINISHED = true; else EVENT_FINISHED = false;
+
+        var time = hours.toString() + ":"
+		if (minutes < 10) time = time + "0"
+		time = time + minutes.toString()
+		document.getElementById("timer").innerHTML = time
+
+        //Check whether time is totally over
+        EVENT_OVERTIMED = !lessTime(time,OVER_HOUR,OVER_MIN)
+
+		globalData.forEach(function(d,i){
+			d.value = 0
+            globalData[i].finished = false
+			d.results.forEach(function(c,j){
+				if (lessTime(c.time, hours, minutes)){
+				   if (c.points.substring(0,1) != "F") {
+                      var newValue = d.value + parseInt(c.points.substring(0,1));
+				      globalData[i].value = newValue
+                   }else{
+                      //Subtract points for late finishers
+                      if (EVENT_FINISHED && !lessTime(c.time,FINISH_HOUR,FINISH_MIN))
+                          globalData[i].value -= PENALTY_POINTS * (parseInt(c.time.substring(3,5)) - FINISH_MIN + 1)
+                      globalData[i].finished = true
+                   }
+
+				   }
+				})
+		})
+
+		globalData = formatData(globalData);
+
+		callback(settings,globalData);
+}
+
+//Loads data
+//Uses a callback because d3.json loading is asynchronous
+var loadData = function(settings,callback){
+	d3.json("resultData.json", function (err, data){
+		if (err) return console.warn(err);
+
+		//Read event params from resultData.json
+        EVENT_TITLE = data.event
+        START_HOUR = parseInt(data.starttime.substring(0,2))
+        START_MIN = parseInt(data.starttime.substring(3,5))
+        FINISH_HOUR = parseInt(data.finishtime.substring(0,2))
+        FINISH_MIN = parseInt(data.finishtime.substring(3,5))
+        OVER_HOUR = parseInt(data.overtime.substring(0,2))
+        OVER_MIN = parseInt(data.overtime.substring(3,5))
+        PENALTY_POINTS = data.penaltypoints
+
+        hours = START_HOUR //Set global hours variable to start hour
+        minutes = START_MIN //Set global minutes variable to start minutes
+        document.getElementById("event_title").innerHTML = EVENT_TITLE
+
+        globalData = formatData(data.teamresults);
+
+		callback(settings,globalData);
+	})
+}
+
+//Sort data in descending order and take the top 10 values
+var formatData = function(data){
+    return data.sort(function (a, b) {
+        return b.value - a.value;
+      });
+}
+
+
+//setup (includes first draw)
+var settings = setup('#chart');
+
+document.getElementById("pause").checked = true
+loadData(settings,redrawChart)
+
+  $("[data-slider]")
+  /*
+    .each(function () {
+      var input = $(this);
+      $("<span>")
+      .addClass("output")
+       .insertAfter($(this));
+    })
+    */
+    .bind("slider:changed", function (event, data) {
+ /*     $(this)
+        .nextAll(".output:first")
+          .html(data.value.toFixed(3));
+*/
+     if (data.trigger == "domDragFinish") updateData(settings,redrawChart,data.value);
+    })
+
+
+
+//Repeat every second
+setInterval(function(){
+	if (document.getElementById("pause").checked && !EVENT_OVERTIMED) updateData(settings,redrawChart,-1)
+}, 1000);
+
+	</script>
+</body>
