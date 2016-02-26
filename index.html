@@ -338,6 +338,15 @@ var formatData = function(data){
 //setup (includes first draw)
 var settings = setup('#chart');
 
+document.onkeypress = function(e) {
+    e = e || window.event;
+    var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
+    if (charCode == 32) {
+        var chk_value = document.getElementById("pause").checked
+        document.getElementById("pause").checked = !chk_value
+    }
+}
+
 document.getElementById("pause").checked = true
 loadData(settings,redrawChart)
 
