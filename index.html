@@ -26,11 +26,18 @@
         <form action="">
             <input id = "pause" type="checkbox" name="rogain_class" value="Go" checked>Pause/Resume
         </form>
+        <form action="">
+            <input id = "chkM" type="checkbox" name="rogain_class" value="M" checked>M
+            <input id = "chkW" type="checkbox" name="rogain_class" value="W" checked>W
+            <input id = "chkX" type="checkbox" name="rogain_class" value="X" checked>X
+            <input id = "chkF" type="checkbox" name="rogain_class" value="F" checked>F
+            <input id = "chkD" type="checkbox" name="rogain_class" value="D" checked>Other
+        </form>
 		<div id="timer"></div>
 		<input type="text" data-slider="true" value="0" data-slider-range="0,390"
 						   data-slider-step="1" data-slider-highlight="true">
 		<div id="chart"></div>
-		<h2>Versija 0.4.2</h2>
+		<h2>Versija 0.4.3</h2>
 	</div>
 
 
@@ -131,7 +138,8 @@ var redrawChart = function(targetID, newdata_param) {
 	  				case "M":col="#6DBDD6"; break;
 	  				case "X":col="#FFE658"; break;
 	  				case "W":col="#FF7878"; break;
-	  				case "F":col="#A8CD1B"; break;}
+	  				case "F":col="#A8CD1B"; break;
+                    default :col="#D3D3D3";}
 	  				return col})
 	  .attr("width", function(d) { return x(d.value);})
 
@@ -181,11 +189,17 @@ var redrawChart = function(targetID, newdata_param) {
 	//UPDATE//
 	//////////
 
-	//Update bar widths
+    //Hide/unhide bars
+    //chartRow.select("bar").transition()
+    //    .attr("visibility",function(d){if(d.show) return "visible"; else return "hidden";})
+
+	//Update bar widths and opacity if necessary
 	chartRow.select(".bar").transition()
 	  .duration(300)
 	  .attr("width", function(d) { return x(d.value);})
-	  .attr("opacity",function(d){return d.finished ? 0.2 : 1});
+	  .attr("opacity",function(d){
+            if (!d.show) return 0;
+            return (d.finished) ? 0.2 : 1});
 
 	//Update data labels
 	chartRow.select(".label").transition()
@@ -288,9 +302,22 @@ var updateData = function(settings,callback,slider_value){
         //Check whether time is totally over
         EVENT_OVERTIMED = !lessTime(time,OVER_HOUR,OVER_MIN)
 
+        var show_M = document.getElementById("chkM").checked
+        var show_W = document.getElementById("chkW").checked
+        var show_X = document.getElementById("chkX").checked
+        var show_F = document.getElementById("chkF").checked
+        var show_D = document.getElementById("chkD").checked
+
 		globalData.forEach(function(d,i){
 			d.value = 0
             globalData[i].finished = false
+            switch (globalData[i].rclass.substring(0,1)){
+                case "M":globalData[i].show = show_M; break;
+                case "W":globalData[i].show = show_W; break;
+                case "X":globalData[i].show = show_X; break;
+                case "F":globalData[i].show = show_F; break;
+                default :globalData[i].show = show_D;
+            }
 			d.results.forEach(function(c,j){
 				if (lessTime(c.time, hours, minutes)){
 				   if (c.points.substring(0,1) != "F") {
@@ -337,6 +364,7 @@ var loadData = function(settings,callback){
         //Count teams
         TEAM_COUNT = 0
         globalData.forEach(function(d,i){
+                globalData[i].show = true
                 TEAM_COUNT++
         })
 
@@ -369,6 +397,12 @@ document.onkeypress = function(e) {
 }
 
 document.getElementById("pause").checked = true
+document.getElementById("chkM").checked = true
+document.getElementById("chkW").checked = true
+document.getElementById("chkX").checked = true
+document.getElementById("chkF").checked = true
+document.getElementById("chkD").checked = true
+
 loadData(settings,redrawChart)
 
   $("[data-slider]")
