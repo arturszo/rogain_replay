@@ -34,10 +34,10 @@
             <input id = "chkD" type="checkbox" name="rogain_class" value="D" checked>Other
         </form>
 		<div id="timer"></div>
-		<input type="text" data-slider="true" value="0" data-slider-range="0,390"
+		<input id="slider" type="text" data-slider="true" value="0"
 						   data-slider-step="1" data-slider-highlight="true">
 		<div id="chart"></div>
-		<h2>Versija 0.4.3</h2>
+		<h2>Versija 0.4.4</h2>
 	</div>
 
 
@@ -321,7 +321,10 @@ var updateData = function(settings,callback,slider_value){
 			d.results.forEach(function(c,j){
 				if (lessTime(c.time, hours, minutes)){
 				   if (c.points.substring(0,1) != "F") {
-                      var newValue = d.value + parseInt(c.points.substring(0,1));
+                       var newValue;
+                      if (c.points.length == 2)
+                          newValue = d.value + parseInt(c.points.substring(0,1))
+                          else newValue = d.value + parseInt(c.points.substring(0,2))
 				      globalData[i].value = newValue
                    }else{
                       //Subtract points for late finishers
@@ -357,6 +360,19 @@ var loadData = function(settings,callback){
 
         hours = START_HOUR //Set global hours variable to start hour
         minutes = START_MIN //Set global minutes variable to start minutes
+
+        var event_length_over = (OVER_HOUR * 60 + OVER_MIN) - (START_HOUR * 60 + START_MIN)
+        var event_length_legal = (FINISH_HOUR * 60 + FINISH_MIN) - (START_HOUR * 60 + START_MIN)
+
+        document.getElementById("slider").setAttribute("data-slider-range","0,"+event_length_over.toString())
+
+        var slider_legal_width = Math.floor(600 * event_length_legal / event_length_over)
+        document.getElementById("slider").setAttribute("highlight-width",slider_legal_width.toString()+"px")
+        //document.getElementById("slider").highlight-track.style.width = slider_legal_width.toString()+"px"
+
+        //console.log(slider_legal_width.toString()+"px")
+
+
         document.getElementById("event_title").innerHTML = EVENT_TITLE
 
         globalData = formatData(data.teamresults);
@@ -370,7 +386,6 @@ var loadData = function(settings,callback){
 
         TEAM_COUNT_CATEGORY = Math.floor(TEAM_COUNT / 10) + 1
         if (TEAM_COUNT_CATEGORY > 6) TEAM_COUNT_CATEGORY = 6
-        console.log(TEAM_COUNT_CATEGORY)
 
 		callback(settings,globalData);
 	})
@@ -403,7 +418,7 @@ document.getElementById("chkX").checked = true
 document.getElementById("chkF").checked = true
 document.getElementById("chkD").checked = true
 
-loadData(settings,redrawChart)
+  loadData(settings,redrawChart)
 
   $("[data-slider]")
   /*
@@ -422,7 +437,7 @@ loadData(settings,redrawChart)
      if (data.trigger == "domDragFinish") updateData(settings,redrawChart,data.value);
     })
 
-
+console.log(document.getElementById("slider").childNodes.length)
 
 //Repeat every second
 setInterval(function(){

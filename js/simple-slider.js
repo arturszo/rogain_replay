@@ -42,9 +42,17 @@ var __slice = [].slice,
         width: "100%"
       });
       if (this.settings.highlight) {
+          if (this.settings.h_width != ""){
+                console.log("width: ", this.settings.h_width)
+                this.highlightTrack = this.createDivElement("highlight-track").css({
+                  //width: this.settings.h_width
+                    width: "200px"
+                })
+          }else{
+                console.log("width: ", this.settings.h_width)
         this.highlightTrack = this.createDivElement("highlight-track").css({
           width: "0"
-        });
+        })};
       }
       this.dragger = this.createDivElement("dragger");
       this.slider.css({
@@ -205,7 +213,7 @@ var __slice = [].slice,
         }, 200);
         if (this.settings.highlight) {
           return this.highlightTrack.animate({
-            width: 554
+            width: this.settings.h_width
           }, 200);
         }
       } else {
@@ -214,7 +222,7 @@ var __slice = [].slice,
         });
         if (this.settings.highlight) {
           return this.highlightTrack.css({
-            width: 554
+            width: this.settings.h_width
           });
         }
       }
@@ -376,6 +384,10 @@ var __slice = [].slice,
       }
       if ($el.attr("data-slider-highlight")) {
         settings.highlight = $el.data("slider-highlight");
+      }
+      if ($el.attr("highlight-width")) {
+        console.log("el: ", $el.attr("highlight-width"))
+        settings.h_width = $el.attr("highlight-width");
       }
       if ($el.data("slider-animate") != null) {
         settings.animate = $el.data("slider-animate");
